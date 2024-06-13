@@ -91,24 +91,6 @@ class MailChimpController extends Controller
         return $records;
     }
 
-    // public function getCampaigns(Request $request)
-    // {
-    //     $request->validate([
-    //         'data_center' => 'required|string',
-    //         'api_key' => 'required|string',
-    //     ]);
-
-    //     $authorizationHeader = $request->header('Authorization');
-    //     Log::info('Authorization Header: ' . $authorizationHeader);
-    //     if (!$this->auth($authorizationHeader)) {
-    //         return response()->json(['error_code' => '401', 'error_description' => 'Unauthorized'], 401);
-    //     }
-
-    //     //$campaignIds = $this->fetchCampaignIds($request->input('data_center'), $request->input('api_key'));
-
-    //     return response()->json($campaignIds);
-    // }
-
     private function fetchCampaignIds($dataCenter, $apiKey)
     {
         $auth = base64_encode('user:' . $apiKey);
@@ -119,8 +101,7 @@ class MailChimpController extends Controller
             'Authorization' => 'Basic ' . $auth,
         ])->get($url);
 
-        //$campaigns = $response['campaigns'];
-        $campaigns = $response->json()['campaigns'];
+        // $campaigns = $response->json()['campaigns'];
         // $oneYearAgo = Carbon::now()->subYear();
 
         // $campaignIds = [];
@@ -129,7 +110,7 @@ class MailChimpController extends Controller
         //         $campaignIds[] = $campaign['id'];
         //     }
         // }
-        //return $campaignIds;
+        // return $campaignIds;
         return $response['campaigns'];
     }
 
@@ -146,7 +127,7 @@ class MailChimpController extends Controller
         $campaignIds = $this->fetchCampaignIds($dataCenter, $apiKey);
 
         //return $campaignIds;
-        Log::info('Campaign IDs: ' . json_encode($campaignIds));
+        //Log::info('Campaign IDs: ' . json_encode($campaignIds));
 
         $openDetails = [];
 
