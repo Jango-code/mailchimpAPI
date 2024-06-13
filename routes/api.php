@@ -9,3 +9,5 @@ Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
 });
 
 Route::post('/getRecords', [MailChimpController::class, 'getRecords']);
+
+Route::post('/getOpenDetails', [MailChimpController::class, 'getOpenDetails']);
