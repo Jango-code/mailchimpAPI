@@ -26,7 +26,7 @@ class MailChimpController extends Controller
 
         return in_array($authorization, $valid_tokens);
     }
-    public function getRecords(Request $request)
+    public function getRecords(Request $request) //Funcion para conseguir los resultados de todas las campañas. Va con el fetchRecords
     {
         $request->validate([
             'data_center' => 'required|string',
@@ -91,31 +91,43 @@ class MailChimpController extends Controller
         return $records;
     }
 
-    private function fetchCampaignIds($dataCenter, $apiKey)
+    private function getCampaignIds($dataCenter, $apiKey) //Funcion para conseguir el id de todas las campañas
     {
         $auth = base64_encode('user:' . $apiKey);
-        $url = "https://$dataCenter.api.mailchimp.com/3.0/campaigns?fields=campaigns.id";
+        $campaigns = [];
+        $offset = 0;
+        $count = 1000;
+        $moreResults = true;
 
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'Authorization' => 'Basic ' . $auth,
-        ])->get($url);
+        $sixMonthsAgo = Carbon::now()->subMonths(6);
 
-        // $campaigns = $response->json()['campaigns'];
-        // $oneYearAgo = Carbon::now()->subYear();
+        while ($moreResults) {
+            $url = "https://$dataCenter.api.mailchimp.com/3.0/campaigns?fields=campaigns.id,campaigns.send_time&offset=$offset&count=$count";
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Basic ' . $auth,
+            ])->get($url);
 
-        // $campaignIds = [];
-        // foreach ($campaigns as $campaign) {
-        //     if (Carbon::parse($campaign['create_time'])->greaterThanOrEqualTo($oneYearAgo)) {
-        //         $campaignIds[] = $campaign['id'];
-        //     }
-        // }
-        // return $campaignIds;
-        return $response['campaigns'];
+            $data = $response->json();
+            if (isset($data['campaigns']) && count($data['campaigns']) > 0) {
+                foreach ($data['campaigns'] as $campaign) {
+                    if (Carbon::parse($campaign['send_time'])->greaterThanOrEqualTo($sixMonthsAgo)) {
+                        $campaigns[] = $campaign['id'];
+                    }
+                }
+                $offset += $count;
+            } else {
+                $moreResults = false;
+            }
+        }
+
+        return $campaigns;
     }
 
-    public function getOpenDetails(Request $request)
-    {
+
+
+    public function getOpenDetails(Request $request) //Funcion para conseguir los contactos que han abierto el mail de cada campaña, cuando se le pasa el Id de la campaña
+    {                                                //Llama a los Ids de cada campaña de la petición de getCampaignsIds
         $request->validate([
             'data_center' => 'required|string',
             'api_key' => 'required|string',
@@ -124,16 +136,16 @@ class MailChimpController extends Controller
         $dataCenter = $request->input('data_center');
         $apiKey = $request->input('api_key');
 
-        $campaignIds = $this->fetchCampaignIds($dataCenter, $apiKey);
+        $campaignIds = $this->getCampaignIds($dataCenter, $apiKey);
 
-        //return $campaignIds;
+        //return $campaignIds;  //Testeo del retorno de las Ids que se están devolviendo
         //Log::info('Campaign IDs: ' . json_encode($campaignIds));
 
         $openDetails = [];
 
         // Para cada ID de campaña, obtener los detalles de apertura y almacenarlos en el array
         foreach ($campaignIds as $campaignId) {
-            $details = $this->fetchOpenDetails($dataCenter, $apiKey, $campaignId['id']);
+            $details = $this->fetchOpenDetails($dataCenter, $apiKey, $campaignId);
             $openDetails[] = $details;
         }
 
@@ -143,7 +155,10 @@ class MailChimpController extends Controller
     private function fetchOpenDetails($dataCenter, $apiKey, $campaignId)
     {
         $auth = base64_encode('user:' . $apiKey);
-        $url = "https://$dataCenter.api.mailchimp.com/3.0/reports/$campaignId/open-details";
+        $offset = 0;
+        $count = 1000;
+
+        $url = "https://$dataCenter.api.mailchimp.com/3.0/reports/$campaignId/open-details?fields=members.campaign_id,members.list_id,members.list_is_active,members.contact_status,members.email_address,members.merge_fields.FNAME,members.merge_fields.LNAME,members.merge_fields.MMERGE5,members.merge_fields.MMERGE6,members.opens_count,members.opens.timestamp&offset=$offset&count=$count";
 
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
