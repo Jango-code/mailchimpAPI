@@ -10,40 +10,38 @@ use Carbon\Carbon;
 class MailChimpController extends Controller
 {
 
-    private function auth($authorization)
-    {
-        if (!$authorization) {
-            return false;
-        }
+    // private function auth($authorization)
+    // {
+    //     if (!$authorization) {
+    //         return false;
+    //     }
 
-        list($type, $authorization) = explode(" ", $authorization);
-        Log::info('Token Type: ' . $type);
-        Log::info('Authorization Token: ' . $authorization);
+    //     list($type, $authorization) = explode(" ", $authorization);
+    //     Log::info('Token Type: ' . $type);
+    //     Log::info('Authorization Token: ' . $authorization);
 
-        $valid_tokens = [
-            'FREETOKEN',
-        ];
+    //     $valid_tokens = [
+    //         'FREETOKEN',
+    //     ];
 
-        return in_array($authorization, $valid_tokens);
-    }
+    //     return in_array($authorization, $valid_tokens);
+    // }
     public function getRecords(Request $request) //Funcion para conseguir los resultados de todas las campañas. Va con el fetchRecords
     {
         $request->validate([
-            'data_center' => 'required|string',
-            'api_key' => 'required|string',
             'count' => 'required|integer',
             'endpoint' => 'required|string',
         ]);
 
         $authorizationHeader = $request->header('Authorization');
         Log::info('Authorization Header: ' . $authorizationHeader);
-        if (!$this->auth($authorizationHeader)) {
-            return response()->json(['error_code' => '401', 'error_description' => 'Unauthorized'], 401);
-        }
+        // if (!$this->auth($authorizationHeader)) {
+        //     return response()->json(['error_code' => '401', 'error_description' => 'Unauthorized'], 401);
+        // }
 
         $result = $this->fetchRecords($request->input('endpoint'), [
-            'data_center' => $request->input('data_center'),
-            'api_key' => $request->input('api_key'),
+            'data_center' => env('MAILCHIMP_API_DATACENTER'),
+            'api_key' =>env('MAILCHIMP_API_KEY'),
             'count' => $request->input('count'),
             'offset' => 0,
         ]);
@@ -126,15 +124,11 @@ class MailChimpController extends Controller
 
 
 
-    public function getOpenDetails(Request $request) //Funcion para conseguir los contactos que han abierto el mail de cada campaña, cuando se le pasa el Id de la campaña
+    public function getOpenDetails() //Funcion para conseguir los contactos que han abierto el mail de cada campaña, cuando se le pasa el Id de la campaña
     {                                                //Llama a los Ids de cada campaña de la petición de getCampaignsIds
-        $request->validate([
-            'data_center' => 'required|string',
-            'api_key' => 'required|string',
-        ]);
 
-        $dataCenter = $request->input('data_center');
-        $apiKey = $request->input('api_key');
+        $dataCenter = env('MAILCHIMP_API_DATACENTER');
+        $apiKey = env('MAILCHIMP_API_KEY');
 
         $campaignIds = $this->getCampaignIds($dataCenter, $apiKey);
 
